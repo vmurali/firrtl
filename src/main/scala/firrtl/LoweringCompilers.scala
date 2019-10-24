@@ -16,7 +16,6 @@ class ChirrtlToHighFirrtl extends CoreTransform {
   def transforms = Seq(
     passes.CheckChirrtl,
     passes.CInferTypes,
-    passes.CInferMDir,
     passes.RemoveCHIRRTL)
 }
 
