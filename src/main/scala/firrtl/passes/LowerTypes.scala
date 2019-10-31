@@ -5,6 +5,7 @@ package firrtl.passes
 import scala.collection.mutable
 import firrtl._
 import firrtl.ir._
+import firrtl.options.Dependency
 import firrtl.Utils._
 import MemPortUtils.memType
 import firrtl.Mappers._
@@ -26,7 +27,7 @@ object LowerTypes extends Transform {
   def inputForm = UnknownForm
   def outputForm = UnknownForm
 
-  override val prerequisites = firrtl.stage.Forms.MidForm
+  override val prerequisites = Dependency[firrtl.transforms.CollapseVectors] +: firrtl.stage.Forms.MidForm
 
   override val dependents = Seq.empty
 

@@ -77,6 +77,8 @@ class LoweringCompilersSpec extends FlatSpec with Matchers {
       passes.ZeroWidth,
       passes.InferTypes)
     case _: MiddleFirrtlToLowFirrtl => Seq(
+      new firrtl.transforms.CollapseVectors,
+      passes.InferTypes,
       passes.LowerTypes,
       passes.ResolveKinds,
       passes.InferTypes,
