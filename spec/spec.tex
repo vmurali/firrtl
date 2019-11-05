@@ -877,21 +877,47 @@ unconditionally accessible by referring to the signal `r`, even though the
 result is conditionally assigned to the signal `bus.rdata`.
 
 \begin{lstlisting}
-read mport r = syncmem[cmd.raddr], clk ; unconditional read
+read mport r = syncmem[cmd.addr], clk ; unconditional read
 when (cmd.ren) :
-  resp.rdata = r
+  resp.rdata <= r
 \end{lstlisting}
 
 In contrast, when the enable signal is provided explicitly, the memory read
 operation itself is conditional on the enable signal.
 
 \begin{lstlisting}
-read mport r = syncmem[cmd.raddr], clk, cmd.ren ; conditional read
+read mport r = syncmem[cmd.addr], clk, cmd.ren ; conditional read
 when (cmd.ren) :
-  resp.rdata = r
+  resp.rdata <= r
 \end{lstlisting}
 
 \subsubsection{Inferred Write Ports}
+
+An inferred write port statement accepts four mandatory arguments: the name of the port, the memory
+to access, the address signal, and the clock. This has the effect of implicitly declaring the
+specified port and connecting the address and clock signals to the corresponding fields (`addr` and
+`clk`) of the new port.
+
+Once an inferred write port is declared, write operations can be performed using the connection
+statement. Intuitively, when the port is used on the left-hand side of an assignment, this
+corresponds to connecting the right-hand side of the assignment to the `data` field of an explicit
+write port and asserting that port's `en` signal. As with any connection, the connection (and
+therefore the write operation) is conditional on any \verb|when| conditions that appear between the
+declaration of the inferred write port and the connection statement.
+
+\begin{lstlisting}
+write mport w = syncmem[cmd.addr], clk
+when (cmd.wen) :
+  w <= cmd.wdata ; conditional write operation
+
+; last-connect semantics apply to inferred writes
+when (cmd.wen && cmd.isClear) :
+  w <= UInt<32>(``h00'') ; different condition
+\end{lstlisting}
+
+Inferred write ports do not support masked writes; therefore, all write operations inherently have
+all subfields enabled. When the conditions are such that no connection to the inferred write port
+occurs, no write operation will occur on that port.
 
 \subsubsection{Inferred Readwrite Ports}
 
