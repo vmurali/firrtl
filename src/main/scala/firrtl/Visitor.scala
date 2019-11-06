@@ -308,12 +308,6 @@ class Visitor(infoMode: InfoMode) extends AbstractParseTreeVisitor[FirrtlNode] w
           }
           DefRegister(info, name, tpe, visitExp(ctx_exp(0)), reset, init)
         case "mem" => visitMem(ctx)
-        case "cmem" =>
-          val (tpe, size) = visitCMemType(ctx.`type`())
-          CDefMemory(info, ctx.id(0).getText, tpe, size, seq = false)
-        case "smem" =>
-          val (tpe, size) = visitCMemType(ctx.`type`())
-          CDefMemory(info, ctx.id(0).getText, tpe, size, seq = true, readUnderWrite = visitRuw(Option(ctx.ruw)))
         case "inst" => DefInstance(info, ctx.id(0).getText, ctx.id(1).getText)
         case "node" => DefNode(info, ctx.id(0).getText, visitExp(ctx_exp(0)))
 
@@ -329,7 +323,7 @@ class Visitor(infoMode: InfoMode) extends AbstractParseTreeVisitor[FirrtlNode] w
           case "<=" => Connect(info, visitExp(ctx_exp(0)), visitExp(ctx_exp(1)))
           case "<-" => PartialConnect(info, visitExp(ctx_exp(0)), visitExp(ctx_exp(1)))
           case "is" => IsInvalid(info, visitExp(ctx_exp(0)))
-          case "mport" => CDefMPort(info, ctx.id(0).getText, UnknownType, ctx.id(1).getText, Seq(visitExp(ctx_exp(0)), visitExp(ctx_exp(1))), visitMdir(ctx.mdir))
+          case "mport" => DefMPort(info, ctx.id(0).getText, ctx.id(1).getText, Seq(visitExp(ctx_exp(0)), visitExp(ctx_exp(1))), visitMdir(ctx.mdir))
         }
     }
   }

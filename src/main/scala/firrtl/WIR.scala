@@ -323,27 +323,7 @@ case object MReadWrite extends MPortDir {
   def serialize: String = "rdwr"
 }
 
-case class CDefMemory(
-    info: Info,
-    name: String,
-    tpe: Type,
-    size: BigInt,
-    seq: Boolean,
-    readUnderWrite: ReadUnderWrite.Value = ReadUnderWrite.Undefined) extends Statement with HasInfo {
-  def serialize: String = (if (seq) "smem" else "cmem") +
-    s" $name : ${tpe.serialize} [$size]" + info.serialize
-  def mapExpr(f: Expression => Expression): Statement = this
-  def mapStmt(f: Statement => Statement): Statement = this
-  def mapType(f: Type => Type): Statement = this.copy(tpe = f(tpe))
-  def mapString(f: String => String): Statement = this.copy(name = f(name))
-  def mapInfo(f: Info => Info): Statement = this.copy(f(info))
-  def foreachStmt(f: Statement => Unit): Unit = Unit
-  def foreachExpr(f: Expression => Unit): Unit = Unit
-  def foreachType(f: Type => Unit): Unit = f(tpe)
-  def foreachString(f: String => Unit): Unit = f(name)
-  def foreachInfo(f: Info => Unit): Unit = f(info)
-}
-case class CDefMPort(info: Info,
+case class WDefMPort(info: Info,
     name: String,
     tpe: Type,
     mem: String,

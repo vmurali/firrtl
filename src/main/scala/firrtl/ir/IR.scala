@@ -353,6 +353,28 @@ case class DefMemory(
   def foreachString(f: String => Unit): Unit = f(name)
   def foreachInfo(f: Info => Unit): Unit = f(info)
 }
+
+case class DefMPort(info: Info,
+    name: String,
+    mem: String,
+    exps: Seq[Expression],
+    direction: MPortDir) extends Statement with HasInfo {
+  def serialize: String = {
+    val dir = direction.serialize
+    s"$dir mport $name = $mem[${exps.head.serialize}], ${exps(1).serialize}" + info.serialize
+  }
+  def mapExpr(f: Expression => Expression): Statement = this.copy(exps = exps map f)
+  def mapStmt(f: Statement => Statement): Statement = this
+  def mapType(f: Type => Type): Statement = this.copy(tpe = f(tpe))
+  def mapString(f: String => String): Statement = this.copy(name = f(name))
+  def mapInfo(f: Info => Info): Statement = this.copy(f(info))
+  def foreachStmt(f: Statement => Unit): Unit = Unit
+  def foreachExpr(f: Expression => Unit): Unit = exps.foreach(f)
+  def foreachType(f: Type => Unit): Unit = f(tpe)
+  def foreachString(f: String => Unit): Unit = f(name)
+  def foreachInfo(f: Info => Unit): Unit = f(info)
+}
+
 case class DefNode(info: Info, name: String, value: Expression) extends Statement with IsDeclaration {
   def serialize: String = s"node $name = ${value.serialize}" + info.serialize
   def mapStmt(f: Statement => Statement): Statement = this
