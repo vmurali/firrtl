@@ -14,10 +14,13 @@ import firrtl.PrimOps._
 import firrtl.WrappedExpression._
 import Utils._
 import MemPortUtils.{memPortField, memType}
-import firrtl.options.{HasShellOptions, ShellOption, StageUtils, PhaseException, Unserializable}
-import firrtl.stage.{RunFirrtlTransformAnnotation, TransformManager}
+import firrtl.options.{HasShellOptions, HowToSerialize, ShellOption, StageOptions, StageUtils, PhaseException}
+import firrtl.options.Viewer.view
+import firrtl.stage.{FirrtlFileAnnotation, FirrtlOptions, RunFirrtlTransformAnnotation, TransformManager}
 // Datastructures
 import scala.collection.mutable.ArrayBuffer
+
+import java.io.File
 
 case class EmitterException(message: String) extends PassException(message)
 
@@ -92,17 +95,45 @@ final case class EmittedFirrtlModule(name: String, value: String, outputSuffix: 
 final case class EmittedVerilogModule(name: String, value: String, outputSuffix: String) extends EmittedModule
 
 /** Traits for Annotations containing emitted components */
-sealed trait EmittedAnnotation[T <: EmittedComponent] extends NoTargetAnnotation with Unserializable {
+sealed trait EmittedAnnotation[T <: EmittedComponent] extends NoTargetAnnotation with HowToSerialize {
   val value: T
+
+  override protected val baseFileName: String = value.name
+
+  override protected val suffix: Option[String] = Some(value.outputSuffix)
+
 }
-sealed trait EmittedCircuitAnnotation[T <: EmittedCircuit] extends EmittedAnnotation[T]
-sealed trait EmittedModuleAnnotation[T <: EmittedModule] extends EmittedAnnotation[T]
+sealed trait EmittedCircuitAnnotation[T <: EmittedCircuit] extends EmittedAnnotation[T] {
+
+  override def howToSerialize: Option[String] = Some(value.value)
+
+  override def filename(annotations: AnnotationSeq): File = {
+    val sopts = view[StageOptions](annotations)
+    val fopts = view[FirrtlOptions](annotations)
+    new File(sopts.getBuildFileName(fopts.outputFileName.getOrElse(baseFileName), suffix))
+  }
+
+}
+sealed trait EmittedModuleAnnotation[T <: EmittedModule] extends EmittedAnnotation[T] {
+
+  override def howToSerialize: Option[String] = Some(value.value)
+
+  override def howToResume(file: File): Option[AnnotationSeq] = None
+
+}
 
 case class EmittedFirrtlCircuitAnnotation(value: EmittedFirrtlCircuit)
-    extends EmittedCircuitAnnotation[EmittedFirrtlCircuit]
-case class EmittedVerilogCircuitAnnotation(value: EmittedVerilogCircuit)
-    extends EmittedCircuitAnnotation[EmittedVerilogCircuit]
+    extends EmittedCircuitAnnotation[EmittedFirrtlCircuit] {
 
+  override def howToResume(file: File): Option[AnnotationSeq] = Some(Seq(FirrtlFileAnnotation(file.toString)))
+
+}
+case class EmittedVerilogCircuitAnnotation(value: EmittedVerilogCircuit)
+    extends EmittedCircuitAnnotation[EmittedVerilogCircuit] {
+
+  override def howToResume(file: File): Option[AnnotationSeq] = None
+
+}
 case class EmittedFirrtlModuleAnnotation(value: EmittedFirrtlModule)
     extends EmittedModuleAnnotation[EmittedFirrtlModule]
 case class EmittedVerilogModuleAnnotation(value: EmittedVerilogModule)
@@ -451,10 +482,10 @@ class VerilogEmitter extends SeqTransform with Emitter {
       case m: Module => new VerilogRender(m, moduleMap)(writer)
     }
   }
-  
-  /** 
+
+  /**
     * Store Emission option per Target
-    * Guarantee only one emission option per Target 
+    * Guarantee only one emission option per Target
     */
   private[firrtl] class EmissionOptionMap[V <: EmissionOption](val df : V) extends collection.mutable.HashMap[ReferenceTarget, V] {
     override def default(key: ReferenceTarget) = df
@@ -462,11 +493,11 @@ class VerilogEmitter extends SeqTransform with Emitter {
       if (this.contains(elem._1))
         throw EmitterException(s"Multiple EmissionOption for the target ${elem._1} (${this(elem._1)} ; ${elem._2})")
       super.+=(elem)
-    } 
+    }
   }
-  
+
   /** Provide API to retrieve EmissionOptions based on the provided [[AnnotationSeq]]
-    * 
+    *
     * @param annotations : AnnotationSeq to be searched for EmissionOptions
     *
     */
@@ -480,16 +511,16 @@ class VerilogEmitter extends SeqTransform with Emitter {
 
     def getRegisterEmissionOption(target: ReferenceTarget): RegisterEmissionOption =
       registerEmissionOption(target)
-      
+
     def getWireEmissionOption(target: ReferenceTarget): WireEmissionOption =
       wireEmissionOption(target)
-      
+
     def getPortEmissionOption(target: ReferenceTarget): PortEmissionOption =
       portEmissionOption(target)
-      
+
     def getNodeEmissionOption(target: ReferenceTarget): NodeEmissionOption =
       nodeEmissionOption(target)
-      
+
     def getConnectEmissionOption(target: ReferenceTarget): ConnectEmissionOption =
       connectEmissionOption(target)
 
@@ -579,9 +610,9 @@ class VerilogEmitter extends SeqTransform with Emitter {
     def declareVectorType(b: String, n: String, tpe: Type, size: BigInt, info: Info, preset: Expression) = {
       declares += Seq(b, " ", tpe, " ", n, " [0:", bigIntToVLit(size - 1), "] = ", preset, ";", info)
     }
-    
+
     val moduleTarget = CircuitTarget(circuitName).module(m.name)
-      
+
     // declare with initial value
     def declare(b: String, n: String, t: Type, info: Info, preset: Expression) = t match {
       case tx: VectorType =>
@@ -589,7 +620,7 @@ class VerilogEmitter extends SeqTransform with Emitter {
       case tx =>
         declares += Seq(b, " ", tx, " ", n, " = ", preset, ";", info)
     }
-    
+
     // original declare without initial value
     def declare(b: String, n: String, t: Type, info: Info) = t match {
       case tx: VectorType =>

@@ -7,7 +7,6 @@ import firrtl.ir.Circuit
 import firrtl.annotations.{Annotation, NoTargetAnnotation}
 import firrtl.options.{HasShellOptions, OptionsException, ShellOption, Unserializable}
 
-
 import java.io.FileNotFoundException
 import java.nio.file.NoSuchFileException
 
