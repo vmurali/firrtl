@@ -40,7 +40,8 @@ class LoweringCompilersSpec extends FlatSpec with Matchers {
       passes.CheckChirrtl,
       passes.CInferTypes,
       passes.CInferMDir,
-      passes.RemoveCHIRRTL)
+      passes.RemoveCHIRRTL,
+      new annotations.transforms.CleanupNamedTargets)
     case _: IRToWorkingIR => Seq(passes.ToWorkingIR)
     case _: ResolveAndCheck => Seq(
       passes.CheckHighForm,
