@@ -382,6 +382,24 @@ object OrderingFixture {
 
 }
 
+object ChiselProxy {
+
+  class A extends IdentityPhase with PreservesAll[Phase]
+
+  class B extends IdentityPhase {
+    override def prerequisites = Seq(Dependency[A])
+    override def invalidates(phase: Phase): Boolean = phase match {
+      case _: A => true
+      case _    => false
+    }
+  }
+
+  class C extends IdentityPhase with PreservesAll[Phase] {
+    override def prerequisites = Seq(Dependency[A])
+  }
+
+}
+
 class PhaseManagerSpec extends AnyFlatSpec with Matchers {
 
   def writeGraphviz(pm: PhaseManager, dir: String): Unit = {
@@ -682,6 +700,27 @@ class PhaseManagerSpec extends AnyFlatSpec with Matchers {
       val order = Seq(classOf[f.B], classOf[f.A], classOf[f.Cx], classOf[f.B], classOf[f.A])
       (new PhaseManager(targets)).flattenedTransformOrder.map(_.getClass) should be (order)
     }
+  }
+
+  it should "work for the Chisel proxy case" in {
+    val f = ChiselProxy
+
+    {
+      val targets = Seq(Dependency[f.C], Dependency[f.B])
+      val pm = new PhaseManager(targets)
+      info(pm.prettyPrint())
+      val order = pm.flattenedTransformOrder.map(Dependency.fromTransform)
+      exactly (1, order) should be (Dependency[f.A])
+    }
+
+    {
+      val targets = Seq(Dependency[f.B], Dependency[f.C])
+      val pm = new PhaseManager(targets)
+      info(pm.prettyPrint())
+      val order = pm.flattenedTransformOrder.map(Dependency.fromTransform)
+      exactly (1, order) should be (Dependency[f.A])
+    }
+
   }
 
 }
