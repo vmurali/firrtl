@@ -8,11 +8,10 @@ import firrtl.options.{Dependency, DependencyManagerException}
 
 case class TransformHistoryAnnotation(history: Seq[Transform], state: Set[Transform]) extends NoTargetAnnotation {
 
-  def add(transform: Transform,
-          invalidates: (Transform) => Boolean = (a: Transform) => false): TransformHistoryAnnotation =
+  def add(transform: Transform): TransformHistoryAnnotation =
     this.copy(
       history = transform +: this.history,
-      state = (this.state + transform).filterNot(invalidates)
+      state = (this.state + transform).filterNot(transform.invalidates)
     )
 
 }
@@ -64,6 +63,6 @@ class TrackTransforms(val underlying: Transform) extends Transform with WrappedT
 
 object TrackTransforms {
 
-  def apply(a: Transform): Transform = new TrackTransforms(a)
+  def apply(a: Transform): TrackTransforms = new TrackTransforms(a)
 
 }
